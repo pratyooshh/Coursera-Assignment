@@ -1,5 +1,5 @@
 /**
- * AI News Aggregator - Frontend Application
+ * AI News Aggregator - Frontend Application (GitHub Pages version)
  * Inshorts-style card-based news reader with swipe navigation.
  */
 
@@ -46,6 +46,9 @@ const SOURCE_COLORS = {
     "google news": "#4285f4",
     "ars technica": "#ff6600",
     "venturebeat": "#2196f3",
+    "reuters": "#ff8800",
+    "wired": "#000000",
+    "the guardian": "#052962",
 };
 
 const SOURCE_GRADIENTS = {
@@ -56,6 +59,9 @@ const SOURCE_GRADIENTS = {
     "google news": "linear-gradient(135deg, #4285f4, #82b1ff)",
     "ars technica": "linear-gradient(135deg, #ff6600, #ffa040)",
     "venturebeat": "linear-gradient(135deg, #2196f3, #64b5f6)",
+    "reuters": "linear-gradient(135deg, #ff8800, #ffbb33)",
+    "wired": "linear-gradient(135deg, #333, #666)",
+    "the guardian": "linear-gradient(135deg, #052962, #1a73e8)",
 };
 
 function getSourceColor(source) {
@@ -169,7 +175,7 @@ async function fetchNews(forceRefresh = false) {
         }
     } catch (error) {
         console.error("Failed to fetch news:", error);
-        // Fall back to demo data when API is unreachable
+        // Fall back to demo data when API is unreachable (GitHub Pages mode)
         console.log("Loading demo articles for offline/static mode...");
         state.articles = DEMO_ARTICLES;
         populateSourceFilter();
@@ -203,7 +209,6 @@ function populateSourceFilter() {
         elements.sourceFilter.appendChild(opt);
     });
 
-    // Restore previous selection if still valid
     if (sources.includes(current)) {
         elements.sourceFilter.value = current;
     }
@@ -266,7 +271,6 @@ function renderCards() {
         return;
     }
 
-    // Render up to 3 cards in the stack
     const cardsToRender = Math.min(3, total - state.currentIndex);
 
     for (let i = cardsToRender - 1; i >= 0; i--) {
@@ -287,7 +291,6 @@ function createCardElement(article, stackPosition) {
     card.className = "news-card";
     card.dataset.stackPosition = stackPosition;
 
-    // Stack positioning
     const scale = 1 - stackPosition * 0.04;
     const translateY = -50 + stackPosition * 2;
     card.style.transform = `translate(-50%, ${translateY}%) scale(${scale})`;
@@ -348,7 +351,6 @@ function createCardElement(article, stackPosition) {
     card.appendChild(imageSection);
     card.appendChild(content);
 
-    // Add swipe handlers only to top card
     if (stackPosition === 0) {
         addSwipeHandlers(card);
     }
@@ -359,12 +361,9 @@ function createCardElement(article, stackPosition) {
 // ==================== Swipe Handling ====================
 
 function addSwipeHandlers(card) {
-    // Touch events
     card.addEventListener("touchstart", handleTouchStart, { passive: true });
     card.addEventListener("touchmove", handleTouchMove, { passive: false });
     card.addEventListener("touchend", handleTouchEnd);
-
-    // Mouse events
     card.addEventListener("mousedown", handleMouseDown);
 }
 
@@ -384,7 +383,6 @@ function handleTouchMove(e) {
     const deltaX = touch.clientX - state.touchStartX;
     const deltaY = Math.abs(touch.clientY - state.touchStartY);
 
-    // If vertical scroll is dominant, don't swipe
     if (deltaY > Math.abs(deltaX) && Math.abs(deltaX) < 20) return;
 
     e.preventDefault();
@@ -402,7 +400,6 @@ function handleTouchEnd(e) {
     if (Math.abs(deltaX) > state.dragThreshold) {
         swipeCard(this, deltaX > 0 ? "right" : "left");
     } else {
-        // Snap back
         this.style.transform = "translate(-50%, -50%) scale(1)";
         this.style.opacity = "1";
     }
@@ -513,20 +510,12 @@ function escapeHtml(text) {
 
 // ==================== Event Listeners ====================
 
-// Refresh button
 elements.refreshBtn.addEventListener("click", () => fetchNews(true));
-
-// Retry button
 elements.retryBtn.addEventListener("click", () => fetchNews(true));
-
-// Empty state refresh
 elements.emptyRefreshBtn.addEventListener("click", () => fetchNews(true));
-
-// Navigation buttons
 elements.prevBtn.addEventListener("click", goPrev);
 elements.nextBtn.addEventListener("click", goNext);
 
-// Source filter
 elements.sourceFilter.addEventListener("change", () => {
     applyFilter();
     state.currentIndex = 0;
@@ -552,7 +541,6 @@ document.addEventListener("keydown", (e) => {
             goPrev();
             break;
         case "Enter":
-            // Open current article
             if (state.filteredArticles[state.currentIndex]) {
                 window.open(state.filteredArticles[state.currentIndex].url, "_blank");
             }
@@ -572,11 +560,9 @@ setInterval(() => fetchNews(false), 30 * 60 * 1000);
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('./sw.js')
             .then((registration) => {
                 console.log('Service Worker registered:', registration.scope);
-
-                // Check for updates periodically
                 setInterval(() => registration.update(), 60 * 60 * 1000);
             })
             .catch((error) => {
@@ -591,11 +577,8 @@ let deferredPrompt = null;
 const installBtn = document.getElementById('install-btn');
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent the default mini-infobar
     e.preventDefault();
     deferredPrompt = e;
-
-    // Show the install button
     if (installBtn) {
         installBtn.style.display = 'flex';
     }
@@ -604,7 +587,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
 if (installBtn) {
     installBtn.addEventListener('click', async () => {
         if (!deferredPrompt) return;
-
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         console.log('Install prompt outcome:', outcome);
