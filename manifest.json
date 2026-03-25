@@ -1,0 +1,18 @@
+{
+    "name": "AI News Aggregator",
+    "short_name": "AI News",
+    "description": "Your daily AI briefing - Inshorts-style news reader",
+    "start_url": ".",
+    "scope": ".",
+    "display": "standalone",
+    "background_color": "#0a0a1a",
+    "theme_color": "#6c5ce7",
+    "orientation": "portrait",
+    "categories": ["news", "technology"],
+    "icons": [
+        {"src": "icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any"},
+        {"src": "icons/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any"},
+        {"src": "icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "maskable"},
+        {"src": "icons/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable"}
+    ]
+}
