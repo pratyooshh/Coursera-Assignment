@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AI News Aggregator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-left">
+            <div class="logo">
+                <span class="logo-icon">⚡</span>
+                <h1>AI News</h1>
+            </div>
+            <span class="tagline">Your daily AI briefing</span>
+        </div>
+        <div class="header-right">
+            <button id="refresh-btn" class="icon-btn" title="Refresh news">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+            </button>
+            <select id="source-filter" class="source-filter" title="Filter by source">
+                <option value="">All Sources</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- Main Card Container -->
+    <main class="main-container">
+        <!-- Loading State -->
+        <div id="loading" class="loading-container">
+            <div class="loading-card">
+                <div class="skeleton skeleton-image"></div>
+                <div class="skeleton-content">
+                    <div class="skeleton skeleton-badge"></div>
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-title short"></div>
+                    <div class="skeleton skeleton-text"></div>
+                    <div class="skeleton skeleton-text"></div>
+                    <div class="skeleton skeleton-text short"></div>
+                </div>
+            </div>
+            <p class="loading-text">Fetching latest AI news...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="error-container" style="display: none;">
+            <div class="error-icon">📡</div>
+            <h2>Unable to fetch news</h2>
+            <p>Check your connection and try again.</p>
+            <button id="retry-btn" class="btn-primary">Retry</button>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty" class="empty-container" style="display: none;">
+            <div class="empty-icon">🔍</div>
+            <h2>No articles found</h2>
+            <p>Try refreshing or changing the source filter.</p>
+            <button id="empty-refresh-btn" class="btn-primary">Refresh</button>
+        </div>
+
+        <!-- Card Stack -->
+        <div id="card-container" class="card-stack" style="display: none;"></div>
+
+        <!-- Swipe Hint Overlay (shown once) -->
+        <div id="swipe-hint" class="swipe-hint" style="display: none;">
+            <div class="hint-content">
+                <span class="hint-arrow left">←</span>
+                <span class="hint-text">Swipe or tap to navigate</span>
+                <span class="hint-arrow right">→</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Navigation -->
+    <footer class="app-footer">
+        <button id="prev-btn" class="nav-btn" disabled title="Previous article">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            <span>Prev</span>
+        </button>
+        <div class="card-counter">
+            <span id="current-index">0</span>
+            <span class="separator">/</span>
+            <span id="total-count">0</span>
+        </div>
+        <button id="next-btn" class="nav-btn" title="Next article">
+            <span>Next</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 6 15 12 9 18"></polyline>
+            </svg>
+        </button>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
