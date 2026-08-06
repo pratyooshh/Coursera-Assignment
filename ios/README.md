@@ -46,7 +46,7 @@ cd ios && rm -rf Scaffold.xcodeproj && xcodegen generate
 | **Toolbox** | 14 guided in-the-moment scripts, one step at a time | Indexed by how it feels ("I can't start"), not by taxonomy |
 | **Mood** | Valence + energy + granular feeling words, RSD episode flagging | Emotional dysregulation predicts quality of life more than core symptoms |
 | **Routines** | Short anchors, one step on screen at a time, optional nudges | An 11-step routine gets abandoned and becomes another failure |
-| **Learn** | 16 research-grounded articles with sources listed | Explanation does real work — much of the harm is the shame layer |
+| **Learn** | 18 research-grounded articles with sources listed | Explanation does real work — much of the harm is the shame layer |
 | **Path** | ASRS v1.1 screener, evidence log, clinician summary export | Turns "I think I might have ADHD" into something assessable |
 | **Wins** | Cumulative count, deliberately **not** a streak | Streaks reset on exactly the failure mode ADHD produces |
 
