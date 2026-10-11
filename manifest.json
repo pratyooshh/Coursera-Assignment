@@ -1,12 +1,12 @@
 {
     "name": "AI News Aggregator",
     "short_name": "AI News",
-    "description": "Your daily AI briefing - Inshorts-style news reader",
+    "description": "Your daily AI briefing - Instagram-style AI news feed",
     "start_url": ".",
     "scope": ".",
     "display": "standalone",
-    "background_color": "#0a0a1a",
-    "theme_color": "#6c5ce7",
+    "background_color": "#000000",
+    "theme_color": "#000000",
     "orientation": "portrait",
     "categories": ["news", "technology"],
     "icons": [

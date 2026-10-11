@@ -1,157 +1,175 @@
-/**
- * AI News Aggregator - Inshorts-style PWA (GitHub Pages)
- */
-const state={articles:[],filteredArticles:[],currentIndex:0,isLoading:false,touchStartX:0,touchStartY:0,touchCurrentX:0,isDragging:false,dragThreshold:80,hintShown:false};
-const elements={loading:document.getElementById("loading"),error:document.getElementById("error"),empty:document.getElementById("empty"),cardContainer:document.getElementById("card-container"),refreshBtn:document.getElementById("refresh-btn"),retryBtn:document.getElementById("retry-btn"),emptyRefreshBtn:document.getElementById("empty-refresh-btn"),prevBtn:document.getElementById("prev-btn"),nextBtn:document.getElementById("next-btn"),currentIndex:document.getElementById("current-index"),totalCount:document.getElementById("total-count"),sourceFilter:document.getElementById("source-filter"),swipeHint:document.getElementById("swipe-hint")};
-const SOURCE_COLORS={"techcrunch":"#0a9e01","mit technology review":"#d32f2f","the verge":"#7b2eff","arxiv ai":"#b71c1c","google news":"#4285f4","ars technica":"#ff6600","venturebeat":"#2196f3"};
-const SOURCE_GRADIENTS={"techcrunch":"linear-gradient(135deg,#0a9e01,#00c853)","mit technology review":"linear-gradient(135deg,#d32f2f,#ff5252)","the verge":"linear-gradient(135deg,#7b2eff,#b388ff)","arxiv ai":"linear-gradient(135deg,#b71c1c,#e57373)","google news":"linear-gradient(135deg,#4285f4,#82b1ff)","ars technica":"linear-gradient(135deg,#ff6600,#ffa040)","venturebeat":"linear-gradient(135deg,#2196f3,#64b5f6)"};
-function getSourceColor(s){return SOURCE_COLORS[s.toLowerCase()]||"#6c5ce7"}
-function getSourceGradient(s){return SOURCE_GRADIENTS[s.toLowerCase()]||"linear-gradient(135deg,#6c5ce7,#a29bfe)"}
-const DEMO_ARTICLES=[
-{title:"OpenAI Announces GPT-5 with Breakthrough Reasoning",summary:"OpenAI unveiled GPT-5 with major improvements in multi-step reasoning, math, and code generation, achieving near-human performance on professional benchmarks.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-1*3600000).toISOString()},
-{title:"Google DeepMind AlphaFold 3 Predicts All Molecular Interactions",summary:"AlphaFold 3 extends protein structure prediction to DNA, RNA, and small molecules, potentially accelerating drug discovery by years.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-2*3600000).toISOString()},
-{title:"EU AI Act Enforcement Begins Targeting High-Risk Systems",summary:"The EU started enforcing its AI Act requiring conformity assessments for high-risk AI. Tech giants scramble to comply with transparency mandates.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-3*3600000).toISOString()},
-{title:"Meta Releases Llama 4 Open-Source Rivaling GPT-5",summary:"Meta open-sourced Llama 4 with performance rivaling proprietary models, including variants for coding, multilingual tasks, and 256K context windows.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-4*3600000).toISOString()},
-{title:"Autonomous AI Agents Managing Enterprise Workflows",summary:"Companies deploy AI agents handling customer support, data analysis, and software testing end-to-end, raising productivity and governance concerns.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-5*3600000).toISOString()},
-{title:"AI Detects Early-Stage Cancer with 95% Accuracy",summary:"A Nature study shows AI can detect 12 cancer types with 95% accuracy from routine blood tests. Clinical trials launching at 50 hospitals worldwide.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-6*3600000).toISOString()},
-{title:"AI Chip Breakthrough Reduces Training Costs by 10x",summary:"New chip architecture using analog-digital hybrid computation cuts transformer training costs by an order of magnitude.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-7*3600000).toISOString()},
-{title:"Microsoft Copilot Integrates Real-Time Code Review",summary:"GitHub Copilot now reviews pull requests in real-time, catching bugs and suggesting improvements before human reviewers see the code.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-8*3600000).toISOString()},
-{title:"Anthropic Claude 5 Sets New Safety Benchmarks",summary:"Anthropic released Claude 5 with Constitutional AI v3, achieving state-of-the-art safety scores while matching frontier model capabilities.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-9*3600000).toISOString()},
-{title:"Tesla Full Self-Driving V13 Approved in Europe",summary:"European regulators approved Tesla FSD V13 for supervised use on highways, marking the first Level 3 autonomous driving approval for the company.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-10*3600000).toISOString()},
-{title:"AI-Powered Drug Discovery Finds New Antibiotic",summary:"An AI system screened 100 million compounds and identified a novel antibiotic effective against drug-resistant bacteria in lab tests.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-11*3600000).toISOString()},
-{title:"NVIDIA Blackwell Ultra GPUs Ship to Cloud Providers",summary:"NVIDIA began shipping Blackwell Ultra B300 GPUs offering 2.5x performance over H100s for AI training workloads.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-12*3600000).toISOString()},
-{title:"China Unveils DeepSeek-V3 Competing with Western Models",summary:"Chinese AI lab DeepSeek released V3, a 600B parameter model matching GPT-4o on benchmarks while training at a fraction of the cost.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-13*3600000).toISOString()},
-{title:"Stable Diffusion 4 Generates Photorealistic Video",summary:"Stability AI released SD4 capable of generating 60fps photorealistic video clips up to 30 seconds from text prompts.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-14*3600000).toISOString()},
-{title:"AI Tutors Outperform Human Teachers in Math Study",summary:"A Stanford study found AI tutoring systems improved student math scores 30% more than traditional instruction over a semester.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-15*3600000).toISOString()},
-{title:"Apple Intelligence 3.0 Brings On-Device LLMs",summary:"Apple announced Intelligence 3.0 with a 7B parameter model running entirely on-device for iPhone 17, enabling offline AI features.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-16*3600000).toISOString()},
-{title:"Robotics Startup Figure Raises $1.5B for Humanoid Robots",summary:"Figure AI raised $1.5B at a $15B valuation to scale production of its humanoid robots for warehouse and manufacturing applications.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-17*3600000).toISOString()},
-{title:"Google Gemini 3 Ultra Achieves PhD-Level Science Reasoning",summary:"Gemini 3 Ultra scored above PhD-level on graduate science exams, demonstrating advanced multi-modal reasoning across text, images, and data.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-18*3600000).toISOString()},
-{title:"AI Weather Forecasting Beats Traditional Models by 48 Hours",summary:"DeepMind's GenCast now predicts extreme weather events 48 hours earlier than conventional forecasting systems with 90% accuracy.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-19*3600000).toISOString()},
-{title:"Transformer Architecture Gets Major Efficiency Upgrade",summary:"Researchers published a new attention mechanism reducing transformer memory usage by 75% while maintaining performance on language tasks.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-20*3600000).toISOString()},
-{title:"Amazon AGI Lab Hires 500 Researchers from Academia",summary:"Amazon's new AGI division hired 500 top AI researchers from universities worldwide, signaling aggressive push toward artificial general intelligence.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-21*3600000).toISOString()},
-{title:"AI-Generated Music Platform Suno Reaches 50M Users",summary:"Suno's AI music generation platform hit 50M monthly users as artists debate copyright implications of AI-composed songs.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-22*3600000).toISOString()},
-{title:"Waymo Expands Robotaxi Service to 10 New Cities",summary:"Waymo announced expansion to 10 additional US cities, now operating autonomous ride-hailing in 15 metropolitan areas.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-23*3600000).toISOString()},
-{title:"AI Protein Design Creates New Enzyme for Plastic Recycling",summary:"AI-designed enzymes can now break down PET plastic 100x faster than natural enzymes, enabling industrial-scale plastic recycling.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-24*3600000).toISOString()},
-{title:"OpenAI Launches Enterprise AI Agent Platform",summary:"OpenAI released an enterprise platform letting companies deploy custom AI agents that integrate with internal tools and databases.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-25*3600000).toISOString()},
-{title:"AI Detects Deepfakes with 99.7% Accuracy",summary:"New detection system identifies AI-generated images, video, and audio with 99.7% accuracy using spectral analysis techniques.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-26*3600000).toISOString()},
-{title:"Samsung Galaxy S26 Features Dedicated AI Chip",summary:"Samsung's Galaxy S26 includes a dedicated neural processing unit running 3x faster AI inference than competitors.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-27*3600000).toISOString()},
-{title:"AI-Assisted Surgery Reduces Complications by 40%",summary:"A clinical trial across 200 hospitals showed AI-guided surgical systems reduced post-operative complications by 40% in complex procedures.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-28*3600000).toISOString()},
-{title:"New AI Benchmark Measures Real-World Task Completion",summary:"Researchers introduced REAL-Bench measuring AI on 1000 practical tasks from coding to research, showing current models complete 67%.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-29*3600000).toISOString()},
-{title:"Microsoft Azure AI Revenue Surpasses $20B Annually",summary:"Microsoft reported Azure AI services exceeded $20B annual run rate, driven by enterprise adoption of Copilot and custom model hosting.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-30*3600000).toISOString()},
-{title:"AI Solves New Mathematical Theorems Independently",summary:"Google DeepMind's FunSearch discovered novel mathematical theorems in combinatorics that human mathematicians verified as genuinely new results.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-31*3600000).toISOString()},
-{title:"Regulation Debate Heats Up Over Autonomous AI Weapons",summary:"The UN convened emergency sessions on autonomous weapons as 40 nations called for a binding treaty banning fully autonomous lethal systems.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-32*3600000).toISOString()},
-{title:"AI Voice Cloning Used in $35M Corporate Fraud Case",summary:"FBI arrested suspects who used AI voice cloning to impersonate a CEO, authorizing $35M in fraudulent wire transfers.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-33*3600000).toISOString()},
-{title:"Hugging Face Reaches 1 Million AI Models on Platform",summary:"Hugging Face celebrated hosting 1 million models on its platform, cementing its position as the GitHub of machine learning.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-34*3600000).toISOString()},
-{title:"AI-Powered Climate Modeling Reveals New Tipping Points",summary:"Advanced AI climate simulations identified three previously unknown climate tipping points that could trigger irreversible changes by 2040.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-35*3600000).toISOString()},
-{title:"Diffusion Models Now Generate 3D Objects from Text",summary:"New research enables generating textured 3D objects from text descriptions in under 10 seconds, revolutionizing game and product design.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-36*3600000).toISOString()},
-{title:"Japan Invests $10B in Domestic AI Chip Manufacturing",summary:"Japan announced a $10B initiative to build advanced AI chip fabs, aiming to reduce dependence on TSMC and NVIDIA supply chains.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-37*3600000).toISOString()},
-{title:"AI Personal Assistants Now Handle Complex Travel Planning",summary:"New AI assistants can book multi-city trips, comparing thousands of options and handling real-time rebooking during disruptions.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-38*3600000).toISOString()},
-{title:"Breakthrough in AI Alignment Using Constitutional Methods",summary:"New constitutional AI training methods show 10x improvement in following human values while maintaining capability on reasoning tasks.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-39*3600000).toISOString()},
-{title:"AI Code Generation Reduces Software Development Time by 55%",summary:"GitHub study of 10,000 developers found AI-assisted coding reduced project completion time by 55% with no increase in bug rates.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-40*3600000).toISOString()},
-{title:"Quantum-AI Hybrid System Breaks Optimization Record",summary:"IBM and Google jointly demonstrated a quantum-classical hybrid that solved a logistics optimization problem 1000x faster than classical AI alone.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-41*3600000).toISOString()},
-{title:"AI Generates Complete Genome Sequences for Extinct Species",summary:"Researchers used AI to reconstruct full genome sequences of woolly mammoths from fragmentary DNA, advancing de-extinction efforts.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-42*3600000).toISOString()},
-{title:"Self-Supervised Learning Eliminates Need for Labeled Data",summary:"New self-supervised technique achieves supervised-level accuracy on vision tasks without any human-labeled training data.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-43*3600000).toISOString()},
-{title:"AI Chatbots Required to Disclose Non-Human Identity",summary:"California passed SB-1047 requiring all AI chatbots to clearly identify themselves as non-human at the start of every conversation.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-44*3600000).toISOString()},
-{title:"Midjourney V7 Renders Photorealistic Hands Perfectly",summary:"Midjourney V7 finally solved the AI hand problem, generating anatomically perfect hands in every pose and context.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-45*3600000).toISOString()},
-{title:"AI Financial Advisor Outperforms Human Fund Managers",summary:"An AI-managed hedge fund returned 47% annually over 3 years, consistently beating 95% of human-managed funds.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-46*3600000).toISOString()},
-{title:"Brain-Computer Interface Powered by AI Restores Speech",summary:"Neuralink's AI-powered BCI enabled a paralyzed patient to speak at 120 words per minute, matching normal conversation speed.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-47*3600000).toISOString()},
-{title:"AI Predicts Earthquakes 72 Hours in Advance",summary:"Machine learning system analyzing seismic sensor data successfully predicted 80% of earthquakes above magnitude 5 with 72-hour lead time.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-48*3600000).toISOString()},
-{title:"Open-Source AI Models Close Gap with Proprietary Systems",summary:"Analysis shows open-source models now perform within 5% of proprietary frontier models on most benchmarks, down from 30% two years ago.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-49*3600000).toISOString()},
-{title:"AI-Designed Materials 10x Stronger Than Steel",summary:"AI material discovery platform designed a new ceramic composite 10x stronger than steel at one-third the weight for aerospace use.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-50*3600000).toISOString()},
-{title:"ByteDance Releases Doubao 3.0 Multimodal AI",summary:"ByteDance launched Doubao 3.0 supporting text, image, video, and audio understanding in a single model available across Asia.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-51*3600000).toISOString()},
-{title:"AI Reduces Hospital Readmissions by 35%",summary:"Predictive AI systems deployed across 500 hospitals reduced 30-day readmission rates by 35% through early risk identification.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-52*3600000).toISOString()},
-{title:"Autonomous Drones Deliver Medical Supplies in Rural Africa",summary:"AI-piloted drone networks now deliver blood, vaccines, and medicines to 5000+ rural clinics across 12 African countries.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-53*3600000).toISOString()},
-{title:"AI Translation Reaches Human Parity in 50 Languages",summary:"Meta's SeamlessM4T v3 achieved human-parity translation quality across 50 languages including speech-to-speech in real-time.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-54*3600000).toISOString()},
-{title:"AI-Powered Farming Increases Crop Yields by 25%",summary:"Precision agriculture AI analyzing satellite imagery, soil sensors, and weather data boosted average crop yields by 25% in trials.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-55*3600000).toISOString()},
-{title:"Researchers Achieve AI Model Compression Without Loss",summary:"Novel distillation technique compresses 100B parameter models to 7B with zero accuracy loss on reasoning benchmarks.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-56*3600000).toISOString()},
-{title:"AI Copyright Case Reaches US Supreme Court",summary:"The Supreme Court agreed to hear a landmark case on whether AI-generated art can be copyrighted, with implications for the entire creative industry.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-57*3600000).toISOString()},
-{title:"xAI Grok 4 Released with Real-Time Internet Access",summary:"Elon Musk's xAI launched Grok 4 with live internet browsing, X integration, and claims of superior reasoning on coding tasks.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-58*3600000).toISOString()},
-{title:"AI Discovers New Superconductor Material at Room Temperature",summary:"An AI materials science platform identified a copper-based compound exhibiting superconductivity at 15 degrees C, verified in three independent labs.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-59*3600000).toISOString()},
-{title:"Smart Glasses with AI Assistant Hit Mass Market at $299",summary:"Meta Ray-Ban AI glasses dropped to $299 with always-on AI assistant, real-time translation, and object recognition.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-60*3600000).toISOString()},
-{title:"AI-Powered Cybersecurity Blocks Zero-Day Attacks in Real Time",summary:"New AI security systems detect and neutralize zero-day exploits within milliseconds, reducing breach success rates by 92%.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-61*3600000).toISOString()},
-{title:"AI Writing Detection Tools Achieve 98% Accuracy",summary:"Next-gen AI writing detectors using watermarking and statistical analysis now identify AI-generated text with 98% accuracy and 0.1% false positives.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-62*3600000).toISOString()},
-{title:"Sparse Mixture of Experts Scales to 10 Trillion Parameters",summary:"New sparse MoE architecture trained a 10T parameter model using only 1% of parameters per inference, maintaining real-time speed.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-63*3600000).toISOString()},
-{title:"AI Generates Functional Software from Natural Language Specs",summary:"Devin 3.0 can now build complete web applications from product requirement documents, handling frontend, backend, and deployment.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-64*3600000).toISOString()},
-{title:"AI Energy Consumption Equals Small Country",summary:"Reports show global AI compute now consumes as much electricity as the Netherlands, prompting calls for energy-efficient model architectures.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-65*3600000).toISOString()},
-{title:"Personalized AI Cancer Vaccines Show 90% Efficacy",summary:"AI-designed personalized mRNA cancer vaccines showed 90% efficacy in Phase 2 trials for melanoma and lung cancer patients.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-66*3600000).toISOString()},
-{title:"AI Moderators Replace Human Content Reviewers at Scale",summary:"Major social platforms shifted to AI-only content moderation, reducing reviewer headcount 80% while improving harmful content detection.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-67*3600000).toISOString()},
-{title:"AI Legal Assistant Passes Bar Exam in Top 1%",summary:"An AI legal system scored in the top 1% of bar exam takers across all US jurisdictions, raising debates about AI in legal practice.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-68*3600000).toISOString()},
-{title:"Autonomous Ships Begin Transatlantic Commercial Voyages",summary:"AI-navigated cargo ships completed first fully autonomous transatlantic voyage, reducing shipping costs by 30% without crew.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-69*3600000).toISOString()},
-{title:"Continual Learning Breakthrough Eliminates Catastrophic Forgetting",summary:"New training technique allows AI models to learn continuously without forgetting previous knowledge, mimicking human learning.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-70*3600000).toISOString()},
-{title:"AI Startup Valuations Exceed $500B Combined",summary:"Total valuation of AI startups founded since 2020 surpassed $500B, with 15 companies achieving decacorn status.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-71*3600000).toISOString()},
-{title:"AI Composes Oscar-Nominated Film Score",summary:"An AI-composed soundtrack received an Academy Award nomination, the first for a non-human composer in cinema history.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-72*3600000).toISOString()},
-{title:"Neural Interface Lets Users Control AI with Thoughts",summary:"A non-invasive neural headband allows users to control AI assistants through thought patterns alone with 95% command accuracy.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-73*3600000).toISOString()},
-{title:"AI Traffic Management Cuts City Commute Times 20%",summary:"AI-optimized traffic light systems deployed in 50 major cities reduced average commute times by 20% and emissions by 15%.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-74*3600000).toISOString()},
-{title:"AI Predicts Stock Market Crashes 2 Weeks Early",summary:"Hedge fund AI analyzing social media, satellite data, and financial patterns predicted the last three market corrections two weeks before they hit.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-75*3600000).toISOString()},
-{title:"AI-Powered Prosthetics Restore Full Hand Dexterity",summary:"New AI-controlled prosthetic hands interpret neural signals to replicate all natural hand movements including individual finger control.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-76*3600000).toISOString()},
-{title:"Reinforcement Learning from AI Feedback Outperforms RLHF",summary:"RLAIF technique using AI-generated feedback produces models preferred by humans 60% more than traditional RLHF methods.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-77*3600000).toISOString()},
-{title:"India Launches National AI Mission with $5B Budget",summary:"India announced a $5B National AI Mission to build sovereign AI infrastructure, train 1M developers, and deploy AI in governance.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-78*3600000).toISOString()},
-{title:"AI Reduces Wildfire Response Time by 60%",summary:"AI satellite monitoring systems detect wildfires within minutes of ignition and predict spread patterns, cutting response time by 60%.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-79*3600000).toISOString()},
-{title:"Synthetic Data Now Trains Better Models Than Real Data",summary:"Research shows models trained on AI-generated synthetic data outperform those trained on real-world data for 70% of vision tasks.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-80*3600000).toISOString()},
-{title:"AI-Designed Buildings Use 40% Less Energy",summary:"Architecture firms using AI generative design create buildings that use 40% less energy through optimized layouts and material selection.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-81*3600000).toISOString()},
-{title:"World's First AI-Run Restaurant Opens in Tokyo",summary:"A restaurant fully operated by AI and robots opened in Tokyo, from cooking to serving, handling 200 customers daily.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-82*3600000).toISOString()},
-{title:"AI Identifies New Species Using Environmental DNA",summary:"AI analysis of environmental DNA samples from rivers discovered 47 previously unknown aquatic species across 5 continents.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-83*3600000).toISOString()},
-{title:"Test-Time Compute Scaling Shows Emergent Reasoning",summary:"Scaling compute at inference time shows models develop emergent reasoning abilities not present during training, challenging scaling laws.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-84*3600000).toISOString()},
-{title:"AI Teaching Assistants Deployed in 10000 US Schools",summary:"AI tutoring systems are now active in 10,000 US schools providing personalized learning support in math, science, and reading.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-85*3600000).toISOString()},
-{title:"AI Journalism Platform Writes 10000 Local News Stories Daily",summary:"An AI news system generates 10,000 hyperlocal news stories daily covering town councils, school boards, and community events.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-86*3600000).toISOString()},
-{title:"AI Predicts Protein Folding in Seconds Instead of Months",summary:"A new model predicts protein 3D structures 1000x faster than AlphaFold while maintaining the same accuracy on CASP benchmarks.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-87*3600000).toISOString()},
-{title:"Smart Home AI Learns Family Routines Without Setup",summary:"New home AI systems observe household patterns for a week then automatically optimize lighting, temperature, and appliance usage.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-88*3600000).toISOString()},
-{title:"AI Hedge Funds Now Manage $500B in Assets",summary:"AI-first hedge funds collectively manage over $500B, with algorithmic strategies dominating quantitative trading globally.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-89*3600000).toISOString()},
-{title:"AI Reconstructs Ancient Languages from Fragments",summary:"Deep learning decoded 3000-year-old Minoan Linear A script using pattern recognition across archaeological fragments.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-90*3600000).toISOString()},
-{title:"Energy-Efficient AI Training Using Neuromorphic Chips",summary:"Intel's Loihi 3 neuromorphic chips train small AI models using 100x less energy than GPUs, ideal for edge deployment.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-91*3600000).toISOString()},
-{title:"AI Automates 60% of Customer Service Interactions",summary:"Enterprise surveys show AI chatbots now handle 60% of customer service queries without human escalation, up from 20% in 2023.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-92*3600000).toISOString()},
-{title:"AI Creates Personalized Workout Plans Beating Trainers",summary:"AI fitness apps generating personalized workout and nutrition plans showed 40% better outcomes than human personal trainers in trials.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-93*3600000).toISOString()},
-{title:"AI Model Explains Its Own Reasoning with Verifiable Proofs",summary:"A new interpretability method lets AI models generate step-by-step proofs for their reasoning that humans can formally verify.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-94*3600000).toISOString()},
-{title:"Autonomous Mining Operations Go Fully AI-Controlled",summary:"Rio Tinto converted 15 mines to fully autonomous operations using AI-controlled trucks, drills, and processing equipment.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-95*3600000).toISOString()},
-{title:"AI Mental Health Chatbot Reduces Depression Symptoms 30%",summary:"Clinical trials show AI therapy chatbots reduced depression symptom severity by 30% over 8 weeks, comparable to traditional CBT.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-96*3600000).toISOString()},
-{title:"AI Maps Entire Ocean Floor in Unprecedented Detail",summary:"AI-powered sonar analysis created the most detailed ocean floor map ever, revealing 12,000 previously unknown underwater features.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-97*3600000).toISOString()},
-{title:"Multimodal AI Understands Sarcasm and Humor at Human Level",summary:"New benchmark shows latest multimodal models correctly interpret sarcasm, irony, and humor in text and images at human-expert level.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-98*3600000).toISOString()},
-{title:"US-China AI Safety Agreement Signed at Summit",summary:"The US and China signed a landmark agreement on AI safety standards, establishing shared red lines for military AI applications.",source:"Ars Technica",url:"https://arstechnica.com/",image_url:"",published:new Date(Date.now()-99*3600000).toISOString()},
-{title:"AI-Powered Water Purification Serves 10M People",summary:"Solar-powered AI water purification systems now serve 10M people in developing regions, adjusting treatment in real-time based on contaminants.",source:"TechCrunch",url:"https://techcrunch.com/",image_url:"",published:new Date(Date.now()-100*3600000).toISOString()},
-{title:"Foundation Models for Robotics Enable Zero-Shot Manipulation",summary:"New robot foundation models perform complex manipulation tasks they were never trained on, from folding laundry to assembling furniture.",source:"MIT Technology Review",url:"https://www.technologyreview.com/",image_url:"",published:new Date(Date.now()-101*3600000).toISOString()},
-{title:"AI Diagnoses Rare Diseases That Doctors Missed for Years",summary:"AI diagnostic tool identified rare genetic diseases in 2000 patients whose conditions went undiagnosed for an average of 7 years.",source:"Google News",url:"https://news.google.com/",image_url:"",published:new Date(Date.now()-102*3600000).toISOString()},
-{title:"AI Generates Complete Movie Scripts That Win Awards",summary:"An AI-written short film won the Tribeca Film Festival's innovation award, marking the first competitive win for AI screenwriting.",source:"The Verge",url:"https://www.theverge.com/",image_url:"",published:new Date(Date.now()-103*3600000).toISOString()},
-{title:"Federated Learning Enables AI Training Across Hospitals",summary:"New federated learning protocol lets 500 hospitals train shared AI models on sensitive patient data without any data leaving the facility.",source:"ArXiv AI",url:"https://arxiv.org/",image_url:"",published:new Date(Date.now()-104*3600000).toISOString()},
-{title:"AI-Powered Grid Management Prevents Blackouts",summary:"AI energy grid systems prevented 47 potential blackouts across the US by predicting demand spikes and rerouting power in real-time.",source:"VentureBeat",url:"https://venturebeat.com/",image_url:"",published:new Date(Date.now()-105*3600000).toISOString()}
-];
-async function fetchNews(forceRefresh=false){
-if(state.isLoading)return;state.isLoading=true;showLoading();elements.refreshBtn.classList.add("spinning");
-try{const url=`${window.location.origin}/api/news${forceRefresh?"?refresh=true":""}`;const r=await fetch(url);if(!r.ok)throw new Error(`HTTP ${r.status}`);const data=await r.json();if(data.error)throw new Error(data.error);let articles=data.articles||[];if(articles.length===0&&data.offline)articles=DEMO_ARTICLES;state.articles=articles;populateSourceFilter();applyFilter();if(state.filteredArticles.length===0){showEmpty()}else{state.currentIndex=0;showCards();renderCards();showSwipeHint()}}
-catch(e){console.log("Loading demo articles...");state.articles=DEMO_ARTICLES;populateSourceFilter();applyFilter();if(state.filteredArticles.length===0){showEmpty()}else{state.currentIndex=0;showCards();renderCards();showSwipeHint()}}
-finally{state.isLoading=false;elements.refreshBtn.classList.remove("spinning")}}
-function populateSourceFilter(){const sources=[...new Set(state.articles.map(a=>a.source))].sort();const cur=elements.sourceFilter.value;elements.sourceFilter.innerHTML='<option value="">All Sources</option>';sources.forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;elements.sourceFilter.appendChild(o)});if(sources.includes(cur))elements.sourceFilter.value=cur}
-function applyFilter(){const s=elements.sourceFilter.value;state.filteredArticles=s?state.articles.filter(a=>a.source===s):[...state.articles]}
-function showLoading(){elements.loading.style.display="flex";elements.error.style.display="none";elements.empty.style.display="none";elements.cardContainer.style.display="none"}
-function showError(){elements.loading.style.display="none";elements.error.style.display="flex";elements.empty.style.display="none";elements.cardContainer.style.display="none"}
-function showEmpty(){elements.loading.style.display="none";elements.error.style.display="none";elements.empty.style.display="flex";elements.cardContainer.style.display="none"}
-function showCards(){elements.loading.style.display="none";elements.error.style.display="none";elements.empty.style.display="none";elements.cardContainer.style.display="block"}
-function showSwipeHint(){if(state.hintShown)return;state.hintShown=true;elements.swipeHint.style.display="block";setTimeout(()=>{elements.swipeHint.style.display="none"},3000)}
-function renderCards(){elements.cardContainer.innerHTML="";const total=state.filteredArticles.length;if(total===0){showEmpty();return}const n=Math.min(3,total-state.currentIndex);for(let i=n-1;i>=0;i--){const idx=state.currentIndex+i;if(idx>=total)continue;elements.cardContainer.appendChild(createCardElement(state.filteredArticles[idx],i))}updateCounter();updateNavButtons()}
-function createCardElement(article,pos){const card=document.createElement("div");card.className="news-card";const scale=1-pos*0.04,ty=-50+pos*2;card.style.transform=`translate(-50%,${ty}%) scale(${scale})`;card.style.zIndex=10-pos;card.style.opacity=pos>1?0.5:1;
-const img=document.createElement("div");img.className="card-image";if(article.image_url){const i=document.createElement("img");i.alt=article.title;i.loading="lazy";i.style.opacity="0";i.onload=()=>(i.style.opacity="1");i.onerror=()=>{img.innerHTML=`<div class="card-image-placeholder" style="background:${getSourceGradient(article.source)}"><span>AI</span></div>`};i.src=article.image_url;img.appendChild(i)}else{img.innerHTML=`<div class="card-image-placeholder" style="background:${getSourceGradient(article.source)}"><span>AI</span></div>`}
-const ov=document.createElement("div");ov.className="card-image-overlay";img.appendChild(ov);
-const content=document.createElement("div");content.className="card-content";content.innerHTML=`<div class="card-meta"><span class="card-source" style="background:${getSourceColor(article.source)}">${escapeHtml(article.source)}</span><span class="card-date">${formatRelativeDate(article.published)}</span></div><h2 class="card-title">${escapeHtml(article.title)}</h2><p class="card-summary">${escapeHtml(article.summary)}</p><a href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer" class="card-link">Read Full Article <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a>`;
-card.appendChild(img);card.appendChild(content);if(pos===0)addSwipeHandlers(card);return card}
-function addSwipeHandlers(card){card.addEventListener("touchstart",handleTouchStart,{passive:true});card.addEventListener("touchmove",handleTouchMove,{passive:false});card.addEventListener("touchend",handleTouchEnd);card.addEventListener("mousedown",handleMouseDown)}
-function handleTouchStart(e){const t=e.touches[0];state.touchStartX=t.clientX;state.touchStartY=t.clientY;state.touchCurrentX=t.clientX;state.isDragging=true;this.classList.add("dragging")}
-function handleTouchMove(e){if(!state.isDragging)return;const t=e.touches[0];state.touchCurrentX=t.clientX;const dx=t.clientX-state.touchStartX,dy=Math.abs(t.clientY-state.touchStartY);if(dy>Math.abs(dx)&&Math.abs(dx)<20)return;e.preventDefault();this.style.transform=`translate(calc(-50% + ${dx}px),-50%) rotate(${dx*0.08}deg)`;this.style.opacity=Math.max(0.3,1-Math.abs(dx)/400)}
-function handleTouchEnd(){if(!state.isDragging)return;state.isDragging=false;this.classList.remove("dragging");const dx=state.touchCurrentX-state.touchStartX;if(Math.abs(dx)>state.dragThreshold){swipeCard(this,dx>0?"right":"left")}else{this.style.transform="translate(-50%,-50%) scale(1)";this.style.opacity="1"}}
-function handleMouseDown(e){e.preventDefault();const card=this,startX=e.clientX;card.classList.add("dragging");function onMove(e){const dx=e.clientX-startX;card.style.transform=`translate(calc(-50% + ${dx}px),-50%) rotate(${dx*0.08}deg)`;card.style.opacity=Math.max(0.3,1-Math.abs(dx)/400)}function onUp(e){document.removeEventListener("mousemove",onMove);document.removeEventListener("mouseup",onUp);card.classList.remove("dragging");const dx=e.clientX-startX;if(Math.abs(dx)>state.dragThreshold){swipeCard(card,dx>0?"right":"left")}else{card.style.transform="translate(-50%,-50%) scale(1)";card.style.opacity="1"}}document.addEventListener("mousemove",onMove);document.addEventListener("mouseup",onUp)}
-function swipeCard(card,dir){card.classList.add(dir==="left"?"swiping-left":"swiping-right");setTimeout(()=>{dir==="left"?goNext():goPrev()},300)}
-function goNext(){if(state.currentIndex<state.filteredArticles.length-1){state.currentIndex++;renderCards()}}
-function goPrev(){if(state.currentIndex>0){state.currentIndex--;renderCards()}}
-function updateCounter(){const t=state.filteredArticles.length;elements.currentIndex.textContent=t>0?state.currentIndex+1:0;elements.totalCount.textContent=t}
-function updateNavButtons(){elements.prevBtn.disabled=state.currentIndex<=0;elements.nextBtn.disabled=state.currentIndex>=state.filteredArticles.length-1}
-function formatRelativeDate(dateStr){if(!dateStr)return"";try{const date=new Date(dateStr.replace(" ","T")+(dateStr.includes("+")?"":"Z"));const ms=Date.now()-date,m=Math.floor(ms/60000),h=Math.floor(ms/3600000),d=Math.floor(ms/86400000);if(m<1)return"Just now";if(m<60)return`${m}m ago`;if(h<24)return`${h}h ago`;if(d===1)return"Yesterday";if(d<7)return`${d}d ago`;return date.toLocaleDateString("en-US",{month:"short",day:"numeric"})}catch{return dateStr}}
-function escapeHtml(t){if(!t)return"";const d=document.createElement("div");d.textContent=t;return d.innerHTML}
-elements.refreshBtn.addEventListener("click",()=>fetchNews(true));elements.retryBtn.addEventListener("click",()=>fetchNews(true));elements.emptyRefreshBtn.addEventListener("click",()=>fetchNews(true));
-elements.prevBtn.addEventListener("click",goPrev);elements.nextBtn.addEventListener("click",goNext);
-elements.sourceFilter.addEventListener("change",()=>{applyFilter();state.currentIndex=0;state.filteredArticles.length>0?(showCards(),renderCards()):showEmpty()});
-document.addEventListener("keydown",e=>{switch(e.key){case"ArrowRight":case"ArrowDown":e.preventDefault();goNext();break;case"ArrowLeft":case"ArrowUp":e.preventDefault();goPrev();break;case"Enter":if(state.filteredArticles[state.currentIndex])window.open(state.filteredArticles[state.currentIndex].url,"_blank");break;case"r":if(!e.ctrlKey&&!e.metaKey)fetchNews(true);break}});
-setInterval(()=>fetchNews(false),30*60*1000);
-if("serviceWorker"in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js").then(r=>{setInterval(()=>r.update(),3600000)}).catch(e=>console.log("SW failed:",e))})}
-let deferredPrompt=null;const installBtn=document.getElementById("install-btn");
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;if(installBtn)installBtn.style.display="flex"});
-if(installBtn){installBtn.addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;installBtn.style.display="none"})}
-window.addEventListener("appinstalled",()=>{deferredPrompt=null;if(installBtn)installBtn.style.display="none"});
-fetchNews();
+/* AI News - Instagram-style PWA */
+const SOURCES={
+"TechCrunch":{short:"TC",grad:"linear-gradient(135deg,#0a9e01,#00c853)"},
+"MIT Technology Review":{short:"MIT",grad:"linear-gradient(135deg,#b71c1c,#ff5252)"},
+"The Verge":{short:"VRG",grad:"linear-gradient(135deg,#5b16d0,#e040fb)"},
+"ArXiv AI":{short:"arX",grad:"linear-gradient(135deg,#7f0000,#e57373)"},
+"Google News":{short:"GN",grad:"linear-gradient(135deg,#1a73e8,#34a853)"},
+"Ars Technica":{short:"ARS",grad:"linear-gradient(135deg,#e65100,#ffb74d)"},
+"VentureBeat":{short:"VB",grad:"linear-gradient(135deg,#0d47a1,#4fc3f7)"}
+};
+const FALLBACK={short:"AI",grad:"linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)"};
+const PAGE=10;
+const ICONS={
+heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/></svg>',
+heartFill:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/></svg>',
+comment:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-12.4 7.4L3 21l2.1-5.6A8.4 8.4 0 1121 11.5z"/></svg>',
+share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><line x1="22" y1="3" x2="9.2" y2="10.1"/><polygon points="22 3 15 21 11 13 3 9.6 22 3"/></svg>',
+save:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>',
+saveFill:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>',
+more:'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
+verified:'<svg class="verified" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1l2.6 2.2 3.4-.4.9 3.3 3 1.7-1.3 3.2 1.3 3.2-3 1.7-.9 3.3-3.4-.4L12 23l-2.6-2.2-3.4.4-.9-3.3-3-1.7L3.4 13 2.1 9.8l3-1.7.9-3.3 3.4.4z"/><path d="M10.5 15.5l-3-3 1.4-1.4 1.6 1.6 4.6-4.6 1.4 1.4z" fill="#000"/></svg>',
+search:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+};
+
+const store={
+get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},
+set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+};
+const state={articles:[],source:"",tab:"home",shown:0,liked:new Set(store.get("liked",[])),saved:new Set(store.get("saved",[])),seen:new Set(store.get("seen",[])),loading:false,query:""};
+const $=id=>document.getElementById(id);
+const el={feed:$("feed"),cards:$("feed-cards"),loading:$("loading"),error:$("error"),empty:$("empty"),stories:$("stories-bar"),refresh:$("refresh-btn")};
+let observer=null;
+
+const meta=s=>SOURCES[s]||FALLBACK;
+const keyOf=a=>a.url+"|"+a.title;
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h)}
+function esc(t){const d=document.createElement("div");d.textContent=t??"";return d.innerHTML}
+function safeUrl(u){try{const x=new URL(u);return x.protocol==="http:"||x.protocol==="https:"?x.href:"#"}catch{return"#"}}
+function fmtNum(n){return n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e4?Math.round(n/1e3)+"K":n.toLocaleString("en-US")}
+function relTime(d){const t=new Date(d);if(isNaN(t))return"";const m=Math.floor((Date.now()-t)/6e4);if(m<1)return"Just now";if(m<60)return m+" minutes ago";const h=Math.floor(m/60);if(h<24)return h+(h===1?" hour ago":" hours ago");const dd=Math.floor(h/24);if(dd<7)return dd+(dd===1?" day ago":" days ago");return t.toLocaleDateString("en-US",{month:"long",day:"numeric"})}
+function toast(msg){let t=document.querySelector(".toast");if(!t){t=document.createElement("div");t.className="toast";document.body.appendChild(t)}t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),1800)}
+function show(which){el.loading.style.display=which==="loading"?"block":"none";el.error.style.display=which==="error"?"flex":"none";el.empty.style.display=which==="empty"?"flex":"none";el.cards.style.display=which==="cards"?"block":"none"}
+
+async function load(force=false){
+if(state.loading)return;state.loading=true;el.refresh.classList.add("spinning");if(!state.articles.length)show("loading");
+let articles=[];
+try{const r=await fetch(`./api/news${force?"?refresh=true":""}`);if(r.ok){const d=await r.json();articles=d.articles||[]}}catch{}
+if(!articles.length)articles=DEMO_ARTICLES;
+state.articles=articles.slice().sort((a,b)=>new Date(b.published)-new Date(a.published));
+state.loading=false;el.refresh.classList.remove("spinning");
+renderStories();render();
+if(force)toast("Feed updated");
+}
+
+function renderStories(){
+const sources=[...new Set(state.articles.map(a=>a.source))];
+const item=(src,label,short,grad)=>`<div class="story-item${state.source===src?" active":""}${src&&state.seen.has(src)?" seen":""}" data-source="${esc(src)}"><div class="story-ring"><div class="story-avatar" style="background:${grad}">${esc(short)}</div></div><span class="story-name">${esc(label)}</span></div>`;
+el.stories.innerHTML=item("","All","ALL","linear-gradient(135deg,#833ab4,#fd1d1d)")+sources.map(s=>item(s,s,meta(s).short,meta(s).grad)).join("");
+}
+el.stories.addEventListener("click",e=>{const it=e.target.closest(".story-item");if(!it)return;const src=it.dataset.source;state.source=state.source===src?"":src;if(src){state.seen.add(src);store.set("seen",[...state.seen])}setTab("home");renderStories()});
+
+function postHTML(a){
+const k=keyOf(a),m=meta(a.source),liked=state.liked.has(k),saved=state.saved.has(k);
+const likes=(hash(a.title)%9000)+800+(liked?1:0);
+const img=a.image_url?`<img src="${esc(safeUrl(a.image_url))}" alt="" loading="lazy" onerror="this.remove()">`:"";
+return `<article class="post" data-key="${esc(k)}">
+<div class="post-header"><div class="post-avatar"><div style="background:${m.grad}">${esc(m.short)}</div></div>
+<div class="post-meta"><div class="post-source">${esc(a.source)} ${ICONS.verified}</div><div class="post-sub">Artificial Intelligence</div></div>
+<button class="post-more" data-act="open" aria-label="Open">${ICONS.more}</button></div>
+<div class="post-media" data-act="media" style="background:${m.grad}">${img}${img?"":`<div class="media-headline">${esc(a.title)}</div>`}<span class="media-tag">${esc(m.short)} · AI</span><div class="heart-burst">${ICONS.heartFill}</div></div>
+<div class="post-actions">
+<button class="act${liked?" liked":""}" data-act="like" aria-label="Like">${liked?ICONS.heartFill:ICONS.heart}</button>
+<button class="act" data-act="open" aria-label="Read">${ICONS.comment}</button>
+<button class="act" data-act="share" aria-label="Share">${ICONS.share}</button>
+<span class="act-spacer"></span>
+<button class="act" data-act="save" aria-label="Save">${saved?ICONS.saveFill:ICONS.save}</button></div>
+<div class="post-likes" data-likes="${likes-(liked?1:0)}">${fmtNum(likes)} likes</div>
+<div class="post-caption"><b>${esc(m.short.toLowerCase())}_news</b><span class="caption-text clamped"><strong>${esc(a.title)}</strong> — ${esc(a.summary)}</span> <button class="more-btn" data-act="expand">more</button></div>
+<a class="post-link" href="${esc(safeUrl(a.url))}" target="_blank" rel="noopener noreferrer">Read full article</a>
+<div class="post-time">${esc(relTime(a.published))}</div></article>`;
+}
+
+function visible(){
+if(state.tab==="saved")return state.articles.filter(a=>state.saved.has(keyOf(a)));
+return state.source?state.articles.filter(a=>a.source===state.source):state.articles;
+}
+
+function render(){
+if(observer){observer.disconnect();observer=null}
+el.stories.style.display=state.tab==="home"?"flex":"none";
+if(state.tab==="explore")return renderExplore();
+if(state.tab==="profile")return renderProfile();
+const list=visible();
+if(!list.length){show(state.tab==="saved"?"cards":"empty");if(state.tab==="saved")el.cards.innerHTML=`<div class="state-message"><div class="state-icon">🔖</div><h2>No saved posts yet</h2><p>Tap the bookmark on any post to save it here.</p></div>`;return}
+show("cards");
+el.cards.innerHTML=state.tab==="saved"?`<div class="tab-title">Saved</div>`:"";
+state.shown=0;appendPage(list);
+}
+function appendPage(list){
+const next=list.slice(state.shown,state.shown+PAGE);
+el.cards.insertAdjacentHTML("beforeend",next.map(postHTML).join(""));
+state.shown+=next.length;
+document.getElementById("sentinel")?.remove();
+if(state.shown<list.length){
+el.cards.insertAdjacentHTML("beforeend",'<div id="sentinel" style="height:1px"></div>');
+observer=new IntersectionObserver(es=>{if(es[0].isIntersecting){observer.disconnect();appendPage(list)}},{rootMargin:"600px"});
+observer.observe(document.getElementById("sentinel"));
+}else if(state.tab==="home"){
+el.cards.insertAdjacentHTML("beforeend",`<div class="state-message" style="padding:40px 24px"><div class="state-icon">✅</div><h2>You're all caught up</h2><p>You've seen all ${list.length} posts.</p></div>`);
+}
+}
+
+function renderExplore(){
+show("cards");
+const q=state.query.toLowerCase();
+const list=state.articles.filter(a=>!q||a.title.toLowerCase().includes(q)||a.summary.toLowerCase().includes(q)||a.source.toLowerCase().includes(q));
+el.cards.innerHTML=`<label class="search-box">${ICONS.search}<input id="search" type="search" placeholder="Search AI news" value="${esc(state.query)}" autocomplete="off"></label>`+
+(list.length?`<div class="grid">${list.map(a=>`<div class="grid-cell" data-key="${esc(keyOf(a))}" style="background:${meta(a.source).grad}"><span>${esc(a.title)}</span></div>`).join("")}</div>`:`<div class="state-message"><div class="state-icon">🔍</div><h2>No results</h2><p>Try another keyword.</p></div>`);
+const input=$("search");
+input.addEventListener("input",()=>{state.query=input.value;const pos=input.selectionStart;renderExplore();const i=$("search");i.focus();i.setSelectionRange(pos,pos)});
+}
+
+function renderProfile(){
+show("cards");
+const sources=new Set(state.articles.map(a=>a.source)).size;
+el.cards.innerHTML=`<div class="profile"><div class="profile-top"><div class="profile-pic"><div>🤖</div></div>
+<div class="profile-stats"><div><b>${state.articles.length}</b><span>posts</span></div><div><b>${state.liked.size}</b><span>liked</span></div><div><b>${state.saved.size}</b><span>saved</span></div></div></div>
+<div class="profile-name">AI News Reader</div>
+<div class="profile-bio">Your daily AI briefing from ${sources} sources.<br>Double-tap a post to like it. Tap a story to filter.</div>
+<button class="profile-btn" id="clear-btn">Clear likes &amp; saved</button></div>`;
+$("clear-btn").addEventListener("click",()=>{state.liked.clear();state.saved.clear();store.set("liked",[]);store.set("saved",[]);renderProfile();toast("Cleared")});
+}
+
+function findByKey(k){return state.articles.find(a=>keyOf(a)===k)}
+function toggleLike(post,force){
+const k=post.dataset.key,btn=post.querySelector('[data-act="like"]'),likesEl=post.querySelector(".post-likes");
+const on=force??!state.liked.has(k);
+on?state.liked.add(k):state.liked.delete(k);store.set("liked",[...state.liked]);
+btn.classList.toggle("liked",on);btn.innerHTML=on?ICONS.heartFill:ICONS.heart;
+likesEl.textContent=fmtNum(+likesEl.dataset.likes+(on?1:0))+" likes";
+}
+let lastTap={key:null,t:0};
+el.cards.addEventListener("click",async e=>{
+const cell=e.target.closest(".grid-cell");
+if(cell){const a=findByKey(cell.dataset.key);if(a){el.cards.innerHTML=`<button class="tab-title" id="back-btn">‹ Explore</button>`+postHTML(a);$("back-btn").addEventListener("click",renderExplore)}return}
+const btn=e.target.closest("[data-act]");if(!btn)return;
+const post=btn.closest(".post");if(!post)return;
+const a=findByKey(post.dataset.key);if(!a)return;
+switch(btn.dataset.act){
+case"like":toggleLike(post);break;
+case"media":{const now=Date.now();if(lastTap.key===post.dataset.key&&now-lastTap.t<320){toggleLike(post,true);const h=post.querySelector(".heart-burst");h.classList.remove("show");void h.offsetWidth;h.classList.add("show");lastTap={key:null,t:0}}else lastTap={key:post.dataset.key,t:now};break}
+case"save":{const k=post.dataset.key,on=!state.saved.has(k);on?state.saved.add(k):state.saved.delete(k);store.set("saved",[...state.saved]);btn.innerHTML=on?ICONS.saveFill:ICONS.save;toast(on?"Saved to your collection":"Removed from saved");if(!on&&state.tab==="saved"){post.remove();if(!visible().length)render()}break}
+case"share":{const data={title:a.title,text:a.summary,url:safeUrl(a.url)};try{if(navigator.share){await navigator.share(data)}else{await navigator.clipboard.writeText(`${a.title} ${data.url}`);toast("Link copied")}}catch{}break}
+case"expand":{post.querySelector(".caption-text").classList.remove("clamped");btn.remove();break}
+case"open":window.open(safeUrl(a.url),"_blank","noopener");break;
+}
+});
+
+function setTab(tab){
+state.tab=tab;
+document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.tab===tab));
+render();window.scrollTo({top:0});
+}
+document.querySelector(".bottom-nav").addEventListener("click",e=>{const n=e.target.closest(".nav-item");if(!n)return;if(n.dataset.tab==="home"&&state.tab==="home"){window.scrollTo({top:0,behavior:"smooth"});return}setTab(n.dataset.tab)});
+document.querySelector(".header-logo").addEventListener("click",()=>{state.source="";renderStories();setTab("home")});
+el.refresh.addEventListener("click",()=>load(true));
+$("retry-btn").addEventListener("click",()=>load(true));
+$("empty-refresh-btn").addEventListener("click",()=>{state.source="";renderStories();render()});
+
+if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+let deferredPrompt=null;const installBtn=$("install-btn");
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;installBtn.style.display="flex"});
+installBtn.addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;installBtn.style.display="none"});
+
+load();

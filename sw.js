@@ -1,8 +1,8 @@
 /**
  * AI News Aggregator - Service Worker
  */
-const CACHE_VERSION='v1',STATIC_CACHE=`ai-news-static-${CACHE_VERSION}`,API_CACHE=`ai-news-api-${CACHE_VERSION}`;
-const STATIC_ASSETS=['./', './index.html', './styles.css', './app.js', './manifest.json', './icons/icon-192.svg', './icons/icon-512.svg'];
+const CACHE_VERSION='v2',STATIC_CACHE=`ai-news-static-${CACHE_VERSION}`,API_CACHE=`ai-news-api-${CACHE_VERSION}`;
+const STATIC_ASSETS=['./', './index.html', './styles.css', './articles.js', './app.js', './manifest.json', './icons/icon-192.svg', './icons/icon-512.svg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(STATIC_CACHE).then(c=>c.addAll(STATIC_ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==STATIC_CACHE&&x!==API_CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.includes('/api/')){e.respondWith(networkFirst(e.request));return;}e.respondWith(cacheFirst(e.request));});
